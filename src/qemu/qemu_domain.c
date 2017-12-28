@@ -9664,13 +9664,16 @@ qemuDomainAttachDeviceMknodHelper(pid_t pid ATTRIBUTE_UNUSED,
 
     if (isLink) {
         VIR_DEBUG("Creating symlink %s -> %s", data->file, data->target);
+        /* The symlink might have changed since the last time we copied it,
+         * so remove it and create it again just to be sure.
+         * See https://bugzilla.redhat.com/show_bug.cgi?id=1528502
+         */
+        unlink(data->file);
         if (symlink(data->target, data->file) < 0) {
-            if (errno != EEXIST) {
-                virReportSystemError(errno,
-                                     _("Unable to create symlink %s"),
-                                     data->target);
-                goto cleanup;
-            }
+            virReportSystemError(errno,
+                                 _("Unable to create symlink %s"),
+                                 data->target);
+            goto cleanup;
         } else {
             delDevice = true;
         }
